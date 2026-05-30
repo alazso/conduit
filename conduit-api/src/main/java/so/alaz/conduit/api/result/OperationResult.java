@@ -6,6 +6,8 @@ import org.jetbrains.annotations.Nullable;
 
 import so.alaz.conduit.api.exception.OperationException;
 
+import java.util.function.Consumer;
+
 /**
  * Result of a void-returning fallible operation.
  *
@@ -57,6 +59,32 @@ public sealed interface OperationResult permits OperationResult.Success, Operati
      * @throws OperationException if this is a {@link Failure}
      */
     void orThrow() throws OperationException;
+
+    /**
+     * Run {@code action} if this operation succeeded.
+     *
+     * @param action the success action
+     * @return this result, for chaining
+     */
+    default @NotNull OperationResult ifSuccess(@NotNull Runnable action) {
+        if (isSuccess()) {
+            action.run();
+        }
+        return this;
+    }
+
+    /**
+     * Run {@code consumer} with the failure if this operation failed.
+     *
+     * @param consumer the failure consumer
+     * @return this result, for chaining
+     */
+    default @NotNull OperationResult ifFailure(@NotNull Consumer<Failure> consumer) {
+        if (this instanceof Failure failure) {
+            consumer.accept(failure);
+        }
+        return this;
+    }
 
     /**
      * @return a shared success result

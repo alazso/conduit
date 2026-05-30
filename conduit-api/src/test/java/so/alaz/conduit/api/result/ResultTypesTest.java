@@ -44,4 +44,36 @@ class ResultTypesTest {
                 .isInstanceOf(OperationException.class)
                 .hasMessageContaining("denied");
     }
+
+    @Test
+    void result_map_transforms_success_and_preserves_failure() {
+        Result<Integer> success = new Result.Success<>(2);
+        assertThat(success.map(v -> v * 10).getOrThrow()).isEqualTo(20);
+
+        Result<Integer> failure = new Result.Failure<>("boom", null);
+        assertThat(failure.map(v -> v * 10).isSuccess()).isFalse();
+    }
+
+    @Test
+    void result_fold_and_ifSuccess() {
+        Result<String> success = new Result.Success<>("hi");
+        String folded = success.fold(v -> "ok:" + v, (reason, cause) -> "err:" + reason);
+        assertThat(folded).isEqualTo("ok:hi");
+
+        StringBuilder seen = new StringBuilder();
+        success.ifSuccess(seen::append);
+        assertThat(seen.toString()).isEqualTo("hi");
+
+        Result<String> failure = new Result.Failure<>("boom", null);
+        String foldedFailure = failure.fold(v -> "ok", (reason, cause) -> "err:" + reason);
+        assertThat(foldedFailure).isEqualTo("err:boom");
+    }
+
+    @Test
+    void operationResult_ifSuccess_and_ifFailure() {
+        StringBuilder log = new StringBuilder();
+        OperationResult.success().ifSuccess(() -> log.append("ok")).ifFailure(f -> log.append("no"));
+        OperationResult.failure("nope").ifSuccess(() -> log.append("no")).ifFailure(f -> log.append(f.reason()));
+        assertThat(log.toString()).isEqualTo("oknope");
+    }
 }

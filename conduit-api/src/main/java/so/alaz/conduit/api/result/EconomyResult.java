@@ -8,7 +8,9 @@ import so.alaz.conduit.api.model.Currency;
 import so.alaz.conduit.api.model.Transaction;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Consumer;
 
 /**
  * The outcome of an economy mutation. All monetary values are {@link BigDecimal}.
@@ -24,6 +26,7 @@ public sealed interface EconomyResult permits
         EconomyResult.InsufficientFunds,
         EconomyResult.AccountNotFound,
         EconomyResult.CurrencyNotSupported,
+        EconomyResult.Rejected,
         EconomyResult.ProviderError {
 
     /**
@@ -91,6 +94,23 @@ public sealed interface EconomyResult permits
     }
 
     /**
+     * The operation was vetoed by a pre-authorisation interceptor (policy), not
+     * by the provider. Distinct from {@link ProviderError}: the backend was
+     * never asked to execute, no funds moved, and no
+     * {@link so.alaz.conduit.api.event.EconomyTransactionEvent} fired. Consumers
+     * and metrics should treat this as an intentional rejection rather than a
+     * backend failure.
+     *
+     * @param reason a human-readable reason for the veto
+     */
+    record Rejected(@NotNull String reason) implements EconomyResult {
+        @Override
+        public boolean isSuccess() {
+            return false;
+        }
+    }
+
+    /**
      * The provider failed to complete the operation.
      *
      * @param message a human-readable error message
@@ -107,4 +127,24 @@ public sealed interface EconomyResult permits
      * @return {@code true} if this is a {@link Success}
      */
     boolean isSuccess();
+
+    /**
+     * @return the {@link Success} case if this is one, else empty
+     */
+    default @NotNull Optional<Success> success() {
+        return this instanceof Success success ? Optional.of(success) : Optional.empty();
+    }
+
+    /**
+     * Run {@code consumer} with the success case if this committed.
+     *
+     * @param consumer the success consumer
+     * @return this result, for chaining
+     */
+    default @NotNull EconomyResult ifSuccess(@NotNull Consumer<Success> consumer) {
+        if (this instanceof Success success) {
+            consumer.accept(success);
+        }
+        return this;
+    }
 }
