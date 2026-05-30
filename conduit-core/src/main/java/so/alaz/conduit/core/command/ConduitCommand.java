@@ -73,8 +73,98 @@ public final class ConduitCommand extends Command {
             case "info" -> economyInfo(sender);
             case "providers" -> economyProviders(sender);
             case "balance" -> economyBalance(sender, args);
-            default -> send(sender, "Usage: /conduit economy <info|providers|balance>", NamedTextColor.RED);
+            case "give" -> economyMutate(sender, args, MutationKind.GIVE);
+            case "take" -> economyMutate(sender, args, MutationKind.TAKE);
+            case "set" -> economyMutate(sender, args, MutationKind.SET);
+            case "pay" -> economyPay(sender, args);
+            default -> send(sender,
+                    "Usage: /conduit economy <info|providers|balance|give|take|set|pay>", NamedTextColor.RED);
         }
+    }
+
+    private enum MutationKind { GIVE, TAKE, SET }
+
+    private void economyMutate(CommandSender sender, String[] args, MutationKind kind) {
+        String verb = kind.name().toLowerCase();
+        if (args.length < 3) {
+            send(sender, "Usage: /conduit economy " + verb + " <player|uuid> <amount>", NamedTextColor.RED);
+            return;
+        }
+        Optional<Economy> economy = Conduit.findEconomy();
+        if (economy.isEmpty()) {
+            send(sender, "No active economy provider.", NamedTextColor.YELLOW);
+            return;
+        }
+        Optional<UUID> target = resolve(args[1]);
+        if (target.isEmpty()) {
+            send(sender, "Unknown player: " + args[1], NamedTextColor.RED);
+            return;
+        }
+        Optional<BigDecimal> amount = parseAmount(sender, args[2]);
+        if (amount.isEmpty()) {
+            return;
+        }
+        Economy e = economy.get();
+        UUID uuid = target.get();
+        var future = switch (kind) {
+            case GIVE -> e.deposit(uuid, amount.get(), "Admin give by " + sender.getName());
+            case TAKE -> e.withdraw(uuid, amount.get(), "Admin take by " + sender.getName());
+            case SET -> e.set(uuid, amount.get());
+        };
+        reportMutation(sender, e, future, verb + " " + args[1]);
+    }
+
+    private void economyPay(CommandSender sender, String[] args) {
+        if (args.length < 4) {
+            send(sender, "Usage: /conduit economy pay <from> <to> <amount>", NamedTextColor.RED);
+            return;
+        }
+        Optional<Economy> economy = Conduit.findEconomy();
+        if (economy.isEmpty()) {
+            send(sender, "No active economy provider.", NamedTextColor.YELLOW);
+            return;
+        }
+        Optional<UUID> from = resolve(args[1]);
+        Optional<UUID> to = resolve(args[2]);
+        if (from.isEmpty() || to.isEmpty()) {
+            send(sender, "Unknown player: " + (from.isEmpty() ? args[1] : args[2]), NamedTextColor.RED);
+            return;
+        }
+        Optional<BigDecimal> amount = parseAmount(sender, args[3]);
+        if (amount.isEmpty()) {
+            return;
+        }
+        Economy e = economy.get();
+        reportMutation(sender, e,
+                e.transfer(from.get(), to.get(), amount.get(), "Admin pay by " + sender.getName()),
+                "pay " + args[1] + " -> " + args[2]);
+    }
+
+    private Optional<BigDecimal> parseAmount(CommandSender sender, String token) {
+        try {
+            BigDecimal amount = new BigDecimal(token);
+            return Optional.of(amount);
+        } catch (NumberFormatException e) {
+            send(sender, "Invalid amount: " + token, NamedTextColor.RED);
+            return Optional.empty();
+        }
+    }
+
+    private void reportMutation(CommandSender sender, Economy economy,
+                                java.util.concurrent.CompletableFuture<so.alaz.conduit.api.result.EconomyResult> future,
+                                String label) {
+        SchedulerAdapter scheduler = plugin.scheduler();
+        future.whenComplete((result, throwable) -> scheduler.runGlobal(() -> {
+            if (throwable != null) {
+                send(sender, "Operation failed: " + throwable.getMessage(), NamedTextColor.RED);
+                return;
+            }
+            if (result.isSuccess()) {
+                send(sender, "OK: " + label, NamedTextColor.GREEN);
+            } else {
+                send(sender, "Failed (" + result.getClass().getSimpleName() + "): " + label, NamedTextColor.YELLOW);
+            }
+        }));
     }
 
     private void economyInfo(CommandSender sender) {
@@ -147,7 +237,7 @@ public final class ConduitCommand extends Command {
             return filter(List.of("info", "economy"), args[0]);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("economy")) {
-            return filter(List.of("info", "providers", "balance"), args[1]);
+            return filter(List.of("info", "providers", "balance", "give", "take", "set", "pay"), args[1]);
         }
         return List.of();
     }
