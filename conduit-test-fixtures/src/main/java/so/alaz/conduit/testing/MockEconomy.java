@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import so.alaz.conduit.api.economy.BankingEconomy;
 import so.alaz.conduit.api.economy.MultiCurrencyEconomy;
 import so.alaz.conduit.api.economy.TransactionalEconomy;
+import so.alaz.conduit.api.economy.support.IdempotencyStore;
 import so.alaz.conduit.api.exception.IdempotencyMismatchException;
 import so.alaz.conduit.api.model.AccountPermission;
 import so.alaz.conduit.api.model.Balance;
@@ -53,7 +54,7 @@ public final class MockEconomy implements BankingEconomy, MultiCurrencyEconomy, 
     private final Map<UUID, Map<String, BigDecimal>> balances = new ConcurrentHashMap<>();
     private final Map<UUID, String> names = new ConcurrentHashMap<>();
     private final Map<UUID, List<Transaction>> history = new ConcurrentHashMap<>();
-    private final Map<UUID, IdempotencyRecord> idempotency = new ConcurrentHashMap<>();
+    private final IdempotencyStore idempotency = new IdempotencyStore();
     private final Map<String, Bank> banks = new ConcurrentHashMap<>();
 
     private MockEconomy(Builder builder) {
@@ -410,17 +411,15 @@ public final class MockEconomy implements BankingEconomy, MultiCurrencyEconomy, 
             UUID operationId, TransactionType type, UUID primary, @Nullable UUID secondary, BigDecimal amount,
             java.util.function.Supplier<CompletableFuture<EconomyResult>> op) {
 
-        IdempotencyRecord existing = idempotency.get(operationId);
-        if (existing != null) {
-            if (existing.matches(type, primary, secondary, amount, defaultCurrency.id())) {
-                return done(existing.result());
-            }
-            return CompletableFuture.failedFuture(new IdempotencyMismatchException(operationId,
-                    "parameters differ from the original submission"));
+        // Uniqueness is scoped to the primary account, per the normative
+        // contract; the fingerprint normalises scale so "10.0" matches "10.00".
+        Object fingerprint = IdempotencyStore.fingerprint(
+                type, String.valueOf(secondary), amount.stripTrailingZeros(), defaultCurrency.id());
+        try {
+            return done(idempotency.execute(primary, operationId, fingerprint, () -> op.get().join()));
+        } catch (IdempotencyMismatchException e) {
+            return CompletableFuture.failedFuture(e);
         }
-        EconomyResult result = op.get().join();
-        idempotency.put(operationId, new IdempotencyRecord(type, primary, secondary, amount, defaultCurrency.id(), result));
-        return done(result);
     }
 
     private Map<String, BigDecimal> defaultAccount() {
@@ -467,16 +466,6 @@ public final class MockEconomy implements BankingEconomy, MultiCurrencyEconomy, 
 
         private Bank(UUID owner) {
             this.owner = owner;
-        }
-    }
-
-    private record IdempotencyRecord(TransactionType type, UUID primary, @Nullable UUID secondary, BigDecimal amount, String currencyId, EconomyResult result) {
-        boolean matches(TransactionType type, UUID primary, @Nullable UUID secondary, BigDecimal amount, String currencyId) {
-            return this.type == type
-                    && this.primary.equals(primary)
-                    && java.util.Objects.equals(this.secondary, secondary)
-                    && this.amount.compareTo(amount) == 0
-                    && this.currencyId.equals(currencyId);
         }
     }
 
