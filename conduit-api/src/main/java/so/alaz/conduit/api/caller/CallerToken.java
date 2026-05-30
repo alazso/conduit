@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 
 /**
  * Identifies the plugin responsible for an economy operation.
@@ -84,6 +85,33 @@ public final class CallerToken {
      */
     public static @NotNull CallerToken current() {
         return CURRENT.orElse(ANONYMOUS);
+    }
+
+    /**
+     * Capture the currently-bound token and wrap {@code action} so it rebinds
+     * that token when run, wherever it runs. Use this to preserve attribution
+     * across async hops that would otherwise break {@link ScopedValue}
+     * propagation (e.g. {@code thenApplyAsync(fn, executor)}).
+     *
+     * @param action the action to wrap
+     * @return a runnable that rebinds the captured token for the action's duration
+     */
+    public static @NotNull Runnable wrapping(@NotNull Runnable action) {
+        CallerToken captured = current();
+        return () -> runWith(captured, action);
+    }
+
+    /**
+     * Wrap an executor so every task submitted to it rebinds the token that was
+     * current <em>at wrap time</em>. Continuations dispatched through the
+     * returned executor therefore observe the correct caller.
+     *
+     * @param delegate the executor to wrap
+     * @return a token-propagating executor
+     */
+    public static @NotNull Executor propagating(@NotNull Executor delegate) {
+        CallerToken captured = current();
+        return task -> delegate.execute(() -> runWith(captured, task));
     }
 
     /**
