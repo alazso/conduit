@@ -17,3 +17,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Local design notes (not published)
+CONDUIT_DESIGN.md
