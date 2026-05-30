@@ -16,12 +16,18 @@ import java.util.function.Supplier;
 @ApiStatus.Internal
 public final class MetricsService {
 
-    private static final int BSTATS_PLUGIN_ID = 99999;
-
     private final Metrics metrics;
 
-    public MetricsService(@NotNull JavaPlugin plugin, @NotNull Supplier<String> activeProviderName) {
-        this.metrics = new Metrics(plugin, BSTATS_PLUGIN_ID);
+    /**
+     * @param plugin             the owning plugin
+     * @param bstatsPluginId     the allocated bStats plugin id (must be positive)
+     * @param activeProviderName supplier of the active economy provider name
+     */
+    public MetricsService(@NotNull JavaPlugin plugin, int bstatsPluginId, @NotNull Supplier<String> activeProviderName) {
+        if (bstatsPluginId <= 0) {
+            throw new IllegalArgumentException("bStats plugin id must be positive, got " + bstatsPluginId);
+        }
+        this.metrics = new Metrics(plugin, bstatsPluginId);
         metrics.addCustomChart(new SimplePie("active_economy_provider", activeProviderName::get));
     }
 
