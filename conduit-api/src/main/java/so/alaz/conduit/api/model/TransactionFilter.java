@@ -24,6 +24,21 @@ public record TransactionFilter(
         int limit
 ) {
     /**
+     * Canonical constructor; validates {@code limit} and the time window.
+     *
+     * @throws IllegalArgumentException if {@code limit} is negative, or
+     *                                  {@code after} is later than {@code before}
+     */
+    public TransactionFilter {
+        if (limit < 0) {
+            throw new IllegalArgumentException("limit must be non-negative, got " + limit);
+        }
+        if (after != null && before != null && after.isAfter(before)) {
+            throw new IllegalArgumentException("after (" + after + ") must not be later than before (" + before + ")");
+        }
+    }
+
+    /**
      * Convenience factory for "most recent N transactions, unfiltered".
      *
      * @param limit maximum number of results

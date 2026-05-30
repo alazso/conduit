@@ -4,6 +4,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigDecimal;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -18,6 +19,15 @@ import java.util.UUID;
  */
 @ApiStatus.AvailableSince("1.0.0")
 public record Balance(@NotNull UUID owner, @NotNull Currency currency, @NotNull BigDecimal amount) {
+
+    /**
+     * Canonical constructor; rejects null components at the boundary.
+     */
+    public Balance {
+        Objects.requireNonNull(owner, "owner");
+        Objects.requireNonNull(currency, "currency");
+        Objects.requireNonNull(amount, "amount");
+    }
 
     /**
      * @return {@code true} if the balance is below zero.

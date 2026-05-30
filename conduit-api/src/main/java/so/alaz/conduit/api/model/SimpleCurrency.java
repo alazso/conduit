@@ -8,6 +8,9 @@ import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A straightforward immutable {@link Currency} implementation suitable for
@@ -30,6 +33,26 @@ public record SimpleCurrency(
         boolean isDefault
 ) implements Currency {
 
+    // Per-scale, per-thread formatters: DecimalFormat is not thread-safe, and
+    // rebuilding it on every format() call is wasteful on hot paths (scoreboards,
+    // PlaceholderAPI). Keyed by decimalPlaces; the symbol is applied separately.
+    private static final Map<Integer, ThreadLocal<DecimalFormat>> FORMATTERS = new ConcurrentHashMap<>();
+
+    /**
+     * Canonical constructor; validates components at the boundary.
+     *
+     * @throws IllegalArgumentException if {@code decimalPlaces} is negative
+     */
+    public SimpleCurrency {
+        Objects.requireNonNull(id, "id");
+        Objects.requireNonNull(singularName, "singularName");
+        Objects.requireNonNull(pluralName, "pluralName");
+        Objects.requireNonNull(symbol, "symbol");
+        if (decimalPlaces < 0) {
+            throw new IllegalArgumentException("decimalPlaces must be non-negative, got " + decimalPlaces);
+        }
+    }
+
     /**
      * Convenience factory for a default currency with matching singular/plural
      * derived from the symbol.
@@ -45,14 +68,18 @@ public record SimpleCurrency(
 
     @Override
     public @NotNull String format(@NotNull BigDecimal amount) {
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.ROOT);
-        StringBuilder pattern = new StringBuilder("#,##0");
-        if (decimalPlaces > 0) {
-            pattern.append('.');
-            pattern.append("0".repeat(decimalPlaces));
-        }
-        DecimalFormat formatter = new DecimalFormat(pattern.toString(), symbols);
-        formatter.setRoundingMode(RoundingMode.HALF_UP);
-        return symbol + formatter.format(amount);
+        return symbol + formatter(decimalPlaces).format(amount);
+    }
+
+    private static DecimalFormat formatter(int decimalPlaces) {
+        return FORMATTERS.computeIfAbsent(decimalPlaces, dp -> ThreadLocal.withInitial(() -> {
+            StringBuilder pattern = new StringBuilder("#,##0");
+            if (dp > 0) {
+                pattern.append('.').append("0".repeat(dp));
+            }
+            DecimalFormat formatter = new DecimalFormat(pattern.toString(), new DecimalFormatSymbols(Locale.ROOT));
+            formatter.setRoundingMode(RoundingMode.HALF_UP);
+            return formatter;
+        })).get();
     }
 }

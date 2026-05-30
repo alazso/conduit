@@ -11,5 +11,7 @@ public enum AccountEventType {
     /** An account was created. */
     CREATED,
     /** An account was deleted. */
-    DELETED
+    DELETED,
+    /** An account was renamed. */
+    RENAMED
 }
