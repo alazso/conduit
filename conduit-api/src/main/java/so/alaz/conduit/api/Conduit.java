@@ -21,6 +21,13 @@ import java.util.function.UnaryOperator;
  */
 public final class Conduit {
 
+    /**
+     * The {@code major.minor} version of the Conduit API this runtime ships.
+     * Providers declare a minimum via {@link Economy#requiredApiVersion()}; the
+     * registry rejects providers requiring a newer API than this.
+     */
+    public static final String API_VERSION = "1.0";
+
     private static volatile ProviderRegistry registry;
     private static volatile UnaryOperator<Economy> economyDecorator = UnaryOperator.identity();
 
