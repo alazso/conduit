@@ -37,4 +37,11 @@ class SemanticVersionTest {
     void equal_versions_are_not_newer() {
         assertThat(SemanticVersion.parse("1.0.0").isNewerThan(SemanticVersion.parse("1.0.0"))).isFalse();
     }
+
+    @Test
+    void renders_canonical_string_for_release_and_prerelease() {
+        assertThat(new SemanticVersion(1, 2, 3, "").toString()).isEqualTo("1.2.3");
+        assertThat(new SemanticVersion(2, 0, 0, "RC1").toString()).isEqualTo("2.0.0-RC1");
+        assertThat(SemanticVersion.parse("v3.4.5-beta.2")).hasToString("3.4.5-beta.2");
+    }
 }
