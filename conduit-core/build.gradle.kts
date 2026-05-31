@@ -32,9 +32,14 @@ tasks.named<ProcessResources>("processResources") {
 // live inside this jar — bundle conduit-api's compiled output here.
 val conduitApiJar = project(":conduit-api").tasks.named<Jar>("jar")
 
+// zipTree must be invoked directly in the script body rather than inside a
+// provider lambda (e.g. `.map { zipTree(it) }`): the lambda would capture a
+// reference to the build-script object, which the configuration cache cannot
+// serialize. zipTree itself accepts the lazy archiveFile provider, so the task
+// inputs stay correct and up-to-date checks still work.
 tasks.named<Jar>("jar") {
     dependsOn(conduitApiJar)
-    from(conduitApiJar.flatMap { it.archiveFile }.map { zipTree(it) }) {
+    from(zipTree(conduitApiJar.flatMap { it.archiveFile })) {
         // Keep only the API classes; this jar provides its own manifest/LICENSE.
         exclude("META-INF/**")
     }

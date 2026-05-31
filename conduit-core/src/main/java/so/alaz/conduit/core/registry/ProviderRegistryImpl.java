@@ -17,7 +17,7 @@ import so.alaz.conduit.api.event.ProviderUnregisterEvent;
 import so.alaz.conduit.api.exception.ProviderNotFoundException;
 import so.alaz.conduit.api.registry.ProviderInfo;
 import so.alaz.conduit.api.registry.ProviderRegistry;
-import so.alaz.conduit.core.economy.EconomyDispatcher;
+import so.alaz.conduit.core.economy.DispatchInvocationHandler;
 import so.alaz.conduit.core.events.EventPublisher;
 import so.alaz.conduit.core.interceptor.InterceptorBus;
 
@@ -227,11 +227,12 @@ public final class ProviderRegistryImpl implements ProviderRegistry {
      * unchanged. Always invoked under {@code lock}.
      */
     private Object decorate(Object provider) {
-        if (provider instanceof EconomyDispatcher) {
-            return provider;
-        }
         if (provider instanceof Economy economy) {
-            return economyDispatchers.computeIfAbsent(economy, e -> new EconomyDispatcher(e, interceptors, events));
+            if (DispatchInvocationHandler.isDecorated(economy)) {
+                return economy;
+            }
+            return economyDispatchers.computeIfAbsent(economy,
+                    e -> DispatchInvocationHandler.decorate(e, interceptors, events));
         }
         return provider;
     }
