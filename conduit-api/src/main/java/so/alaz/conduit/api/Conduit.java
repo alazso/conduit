@@ -8,16 +8,15 @@ import so.alaz.conduit.api.registry.ProviderRegistry;
 
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.UnaryOperator;
 
 /**
  * Static entry point to the Conduit runtime.
  *
- * <p>The {@link ProviderRegistry} and the economy decorator are installed by
- * {@code conduit-core} during plugin bootstrap. The decorator wraps resolved
- * {@link Economy} providers with the dispatch layer (synchronous amount
- * validation, pre-auth interceptors, post-commit events); in environments where
- * core is not present (e.g. pure unit tests) it defaults to identity.
+ * <p>The {@link ProviderRegistry} is installed by {@code conduit-core} during
+ * plugin bootstrap. The registry is the sole owner of dispatch decoration: every
+ * resolved {@link Economy} it returns is already wrapped with the dispatch layer
+ * (synchronous amount validation, pre-auth interceptors, post-commit events), so
+ * this facade simply forwards to it.
  */
 public final class Conduit {
 
@@ -29,9 +28,16 @@ public final class Conduit {
     public static final String API_VERSION = "1.0";
 
     private static volatile ProviderRegistry registry;
-    private static volatile UnaryOperator<Economy> economyDecorator = UnaryOperator.identity();
 
     private Conduit() {
+    }
+
+    /**
+     * @return {@code true} if the Conduit runtime has been initialised (the
+     *         plugin is enabled); {@code false} before enable or after disable
+     */
+    public static boolean isInitialized() {
+        return registry != null;
     }
 
     /**
@@ -53,7 +59,7 @@ public final class Conduit {
      * @throws IllegalStateException if the Conduit runtime is not initialised
      */
     public static @NotNull Economy getEconomy() {
-        return economyDecorator.apply(getRegistry().requireProvider(Economy.class));
+        return getRegistry().requireProvider(Economy.class);
     }
 
     /**
@@ -61,7 +67,7 @@ public final class Conduit {
      * @throws IllegalStateException if the Conduit runtime is not initialised
      */
     public static @NotNull Optional<Economy> findEconomy() {
-        return getRegistry().getProvider(Economy.class).map(economyDecorator);
+        return getRegistry().getProvider(Economy.class);
     }
 
     /**
@@ -87,22 +93,11 @@ public final class Conduit {
     }
 
     /**
-     * Install the economy dispatch decorator. Called once by {@code conduit-core}.
-     *
-     * @param decorator wraps a raw economy provider with the dispatch layer
-     */
-    @ApiStatus.Internal
-    public static void setEconomyDecorator(@NotNull UnaryOperator<Economy> decorator) {
-        economyDecorator = decorator;
-    }
-
-    /**
      * Tear down the runtime references. Called by {@code conduit-core} on disable
      * and usable by tests to reset global state.
      */
     @ApiStatus.Internal
     public static void shutdown() {
         registry = null;
-        economyDecorator = UnaryOperator.identity();
     }
 }

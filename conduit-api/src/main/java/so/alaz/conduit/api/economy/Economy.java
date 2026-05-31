@@ -224,6 +224,6 @@ public interface Economy extends Capable {
      * @return a fresh fluent transaction builder bound to this economy
      */
     default @NotNull TransactionBuilder transaction() {
-        return new DefaultTransactionBuilder(this);
+        return TransactionBuilder.forEconomy(this);
     }
 }

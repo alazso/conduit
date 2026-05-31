@@ -105,4 +105,18 @@ public interface TransactionBuilder {
      *                               economy cannot satisfy
      */
     @NotNull CompletableFuture<EconomyResult> execute();
+
+    /**
+     * Create a builder bound to the given economy. Equivalent to
+     * {@link Economy#transaction()}; exposed so the runtime can bind a builder to
+     * the outward-facing (dispatch-decorated) economy handle, ensuring the
+     * {@link #currency(Currency)} / {@link #idempotencyKey(UUID)} capability
+     * guards reflect the provider's real interfaces rather than the decorator's.
+     *
+     * @param economy the economy to bind the builder to
+     * @return a fresh builder
+     */
+    static @NotNull TransactionBuilder forEconomy(@NotNull Economy economy) {
+        return new DefaultTransactionBuilder(economy);
+    }
 }
