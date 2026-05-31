@@ -42,11 +42,12 @@ final class BuyCommand extends Command {
             return true;
         }
 
+        // The registry returns a dispatch-decorated handle, so operating on it
+        // already runs validation, interceptors, and events — no extra wrapping.
         Economy chosen = resolved.get();
-        Economy handle = plugin.dispatchHandleFor(chosen);
         try {
             CallerToken.runWith(plugin.callerToken(), () ->
-                    handle.withdraw(buyer.getUniqueId(), ConduitShopPlugin.ITEM_PRICE, "Shop purchase: diamond")
+                    chosen.withdraw(buyer.getUniqueId(), ConduitShopPlugin.ITEM_PRICE, "Shop purchase: diamond")
                             .thenAccept(result -> report(buyer, chosen, result))
                             .exceptionally(throwable -> {
                                 buyer.sendMessage(ConduitShopPlugin.error("Purchase failed: " + throwable.getMessage()));

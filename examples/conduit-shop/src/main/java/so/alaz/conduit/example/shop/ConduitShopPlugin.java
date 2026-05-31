@@ -61,6 +61,10 @@ public final class ConduitShopPlugin extends JavaPlugin {
      * enable, so it is immune to plugin load order: by the time a player buys,
      * every provider is registered.
      *
+     * <p>The registry returns dispatch-decorated handles, so the returned economy
+     * already routes through Conduit's validation/interceptors/events — callers
+     * operate on it directly.
+     *
      * @return the configured provider, the active provider as a fallback, or empty
      *         if nothing is registered at all
      */
@@ -86,20 +90,6 @@ public final class ConduitShopPlugin extends JavaPlugin {
             return info.activeProvider();
         }
         return match;
-    }
-
-    /**
-     * Wrap the chosen provider in Conduit's dispatch layer when it is the active
-     * provider. Non-active providers are returned raw — operating on them bypasses
-     * validation/interceptors/events, which is an inherent property of targeting a
-     * specific non-default provider.
-     *
-     * @param chosen the provider the owner selected
-     * @return the handle to actually operate through
-     */
-    Economy dispatchHandleFor(Economy chosen) {
-        Economy rawActive = Conduit.getRegistry().getProvider(Economy.class).orElse(null);
-        return chosen.equals(rawActive) ? Conduit.getEconomy() : chosen;
     }
 
     /**
