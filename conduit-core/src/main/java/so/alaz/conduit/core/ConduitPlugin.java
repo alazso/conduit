@@ -9,7 +9,6 @@ import org.jetbrains.annotations.NotNull;
 import so.alaz.conduit.api.Conduit;
 import so.alaz.conduit.api.economy.Economy;
 import so.alaz.conduit.core.command.ConduitCommand;
-import so.alaz.conduit.core.economy.EconomyDispatcher;
 import so.alaz.conduit.core.events.BukkitEventPublisher;
 import so.alaz.conduit.core.events.EventPublisher;
 import so.alaz.conduit.core.interceptor.InterceptorBus;
@@ -38,6 +37,7 @@ public final class ConduitPlugin extends JavaPlugin {
     private SchedulerAdapter scheduler;
     private EventPublisher eventPublisher;
     private MetricsService metrics;
+    private ConduitCommand command;
 
     @Override
     public void onEnable() {
@@ -49,7 +49,6 @@ public final class ConduitPlugin extends JavaPlugin {
         this.registry = new ProviderRegistryImpl(eventPublisher, interceptors);
 
         Conduit.init(registry);
-        Conduit.setEconomyDecorator(this::decorate);
 
         applyProviderOverride();
         registerCommand();
@@ -67,11 +66,24 @@ public final class ConduitPlugin extends JavaPlugin {
         if (metrics != null) {
             metrics.shutdown();
         }
+        unregisterCommand();
         Conduit.shutdown();
     }
 
     private void registerCommand() {
-        getServer().getCommandMap().register("conduit", new ConduitCommand(this));
+        this.command = new ConduitCommand(this);
+        getServer().getCommandMap().register("conduit", command);
+    }
+
+    private void unregisterCommand() {
+        if (command == null) {
+            return;
+        }
+        command.unregister(getServer().getCommandMap());
+        // Drop any aliases/labels still pointing at our command so a /reload
+        // re-enable does not collide with a stale registration.
+        getServer().getCommandMap().getKnownCommands().values().removeIf(c -> c == command);
+        command = null;
     }
 
     private void registerPlaceholders() {
@@ -130,13 +142,6 @@ public final class ConduitPlugin extends JavaPlugin {
         } catch (ClassNotFoundException e) {
             return false;
         }
-    }
-
-    private Economy decorate(@NotNull Economy economy) {
-        if (economy instanceof EconomyDispatcher) {
-            return economy;
-        }
-        return new EconomyDispatcher(economy, interceptors, eventPublisher);
     }
 
     /**
