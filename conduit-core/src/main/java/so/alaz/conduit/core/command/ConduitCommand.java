@@ -12,6 +12,7 @@ import so.alaz.conduit.api.Conduit;
 import so.alaz.conduit.api.economy.Economy;
 import so.alaz.conduit.api.registry.ProviderInfo;
 import so.alaz.conduit.core.ConduitPlugin;
+import so.alaz.conduit.core.economy.AmountValidator;
 import so.alaz.conduit.core.scheduler.SchedulerAdapter;
 
 import java.math.BigDecimal;
@@ -44,6 +45,10 @@ public final class ConduitCommand extends Command {
     public boolean execute(@NotNull CommandSender sender, @NotNull String label, @NotNull String[] args) {
         if (!sender.hasPermission(PERMISSION)) {
             send(sender, "You lack permission (" + PERMISSION + ").", NamedTextColor.RED);
+            return true;
+        }
+        if (!Conduit.isInitialized()) {
+            send(sender, "Conduit is not ready (reloading or disabled).", NamedTextColor.YELLOW);
             return true;
         }
         if (args.length == 0 || args[0].equalsIgnoreCase("info")) {
@@ -106,6 +111,9 @@ public final class ConduitCommand extends Command {
         }
         Economy e = economy.get();
         UUID uuid = target.get();
+        if (!validateAmount(sender, amount.get(), e, kind == MutationKind.SET)) {
+            return;
+        }
         var future = switch (kind) {
             case GIVE -> e.deposit(uuid, amount.get(), "Admin give by " + sender.getName());
             case TAKE -> e.withdraw(uuid, amount.get(), "Admin take by " + sender.getName());
@@ -135,6 +143,9 @@ public final class ConduitCommand extends Command {
             return;
         }
         Economy e = economy.get();
+        if (!validateAmount(sender, amount.get(), e, false)) {
+            return;
+        }
         reportMutation(sender, e,
                 e.transfer(from.get(), to.get(), amount.get(), "Admin pay by " + sender.getName()),
                 "pay " + args[1] + " -> " + args[2]);
@@ -147,6 +158,27 @@ public final class ConduitCommand extends Command {
         } catch (NumberFormatException e) {
             send(sender, "Invalid amount: " + token, NamedTextColor.RED);
             return Optional.empty();
+        }
+    }
+
+    /**
+     * Validate a parsed amount against the active currency's rules before
+     * dispatching, so bad operator input yields a friendly message rather than an
+     * uncaught {@link IllegalArgumentException} and a console stack trace.
+     *
+     * @return {@code true} if the amount is valid; otherwise reports the reason and returns {@code false}
+     */
+    private boolean validateAmount(CommandSender sender, BigDecimal amount, Economy economy, boolean absolute) {
+        try {
+            if (absolute) {
+                AmountValidator.validateAbsolute(amount, economy.defaultCurrency());
+            } else {
+                AmountValidator.validateMagnitude(amount, economy.defaultCurrency());
+            }
+            return true;
+        } catch (IllegalArgumentException e) {
+            send(sender, "Invalid amount: " + e.getMessage(), NamedTextColor.RED);
+            return false;
         }
     }
 
@@ -212,9 +244,13 @@ public final class ConduitCommand extends Command {
         }
         Economy e = economy.get();
         SchedulerAdapter scheduler = plugin.scheduler();
-        e.getBalance(target.get()).thenAccept(balance ->
-                scheduler.runGlobal(() -> send(sender,
-                        args[1] + ": " + e.defaultCurrency().format(balance.amount()), NamedTextColor.GREEN)));
+        e.getBalance(target.get()).whenComplete((balance, throwable) -> scheduler.runGlobal(() -> {
+            if (throwable != null) {
+                send(sender, "Failed to read balance: " + throwable.getMessage(), NamedTextColor.RED);
+                return;
+            }
+            send(sender, args[1] + ": " + e.defaultCurrency().format(balance.amount()), NamedTextColor.GREEN);
+        }));
     }
 
     private Optional<UUID> resolve(String token) {
