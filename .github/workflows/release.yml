@@ -100,7 +100,7 @@ jobs:
           mkdir -p "$STAGING"
 
           cp "conduit-core/build/libs/conduit-core-${VERSION}.jar" \
-            "$STAGING/Conduit-${VERSION}.jar"
+            "$STAGING/conduit-core-${VERSION}.jar"
           cp "conduit-api/build/libs/conduit-api-${VERSION}.jar" \
             "$STAGING/conduit-api-${VERSION}.jar"
           cp "conduit-core/build/libs/conduit-core-${VERSION}-javadoc.jar" \
@@ -143,7 +143,7 @@ jobs:
             echo
             echo "| File | Description |"
             echo "| --- | --- |"
-            echo "| \`Conduit-${VERSION}.jar\` | Conduit Paper/Folia plugin (bundles the API) |"
+            echo "| \`conduit-core-${VERSION}.jar\` | Conduit Paper/Folia plugin (bundles the API) |"
             echo "| \`conduit-api-${VERSION}.jar\` | Standalone API library for bridge authors |"
             echo "| \`conduit-core-${VERSION}-javadoc.jar\` | Javadoc JAR for the runtime module |"
             echo "| \`conduit-api-${VERSION}-javadoc.jar\` | Javadoc JAR for the API module |"
