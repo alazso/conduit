@@ -35,4 +35,24 @@ publishing {
             }
         }
     }
+    repositories {
+        // Self-hosted Reposilite at repo.alaz.so. Reads are anonymous; deploys use
+        // a token supplied via gradle properties (local) or env vars (CI).
+        maven {
+            name = "alazso"
+            url = uri(
+                if (version.toString().endsWith("SNAPSHOT")) {
+                    "https://repo.alaz.so/snapshots"
+                } else {
+                    "https://repo.alaz.so/releases"
+                }
+            )
+            credentials {
+                username = providers.gradleProperty("alazsoUser")
+                    .orElse(providers.environmentVariable("ALAZSO_REPO_USER")).orNull
+                password = providers.gradleProperty("alazsoToken")
+                    .orElse(providers.environmentVariable("ALAZSO_REPO_TOKEN")).orNull
+            }
+        }
+    }
 }
