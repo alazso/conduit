@@ -12,6 +12,7 @@ dependencyResolutionManagement {
         maven("https://repo.papermc.io/repository/maven-public/") { name = "papermc" }
         maven("https://repo.extendedclip.com/content/repositories/placeholderapi/") { name = "placeholderapi" }
         maven("https://repo.essentialsx.net/releases/") { name = "essentialsx" }
+        maven("https://repo.faststats.dev/releases") { name = "faststats" }
     }
 }
 
