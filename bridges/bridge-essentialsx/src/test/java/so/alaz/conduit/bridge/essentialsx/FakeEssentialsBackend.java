@@ -10,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * In-memory {@link EssentialsEconomyBackend} for exercising the bridge
  * translation logic without a live EssentialsX/server.
  */
-final class FakeEssentialsBackend implements EssentialsEconomyBackend {
+class FakeEssentialsBackend implements EssentialsEconomyBackend {
 
     private final ConcurrentHashMap<UUID, BigDecimal> balances = new ConcurrentHashMap<>();
 
