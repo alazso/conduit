@@ -12,7 +12,7 @@
 [![Paper](https://img.shields.io/badge/server-Paper%2FFolia%2026.1%2B-blue?style=flat-square)](https://papermc.io/)
 [![Stars](https://img.shields.io/github/stars/alazso/Conduit?style=flat-square)](https://github.com/alazso/Conduit/stargazers)
 
-[**Docs**](https://alaz.so/conduit/docs) · [**Developer Guide**](https://alaz.so/conduit/developers) · [**Wiki**](https://github.com/alazso/Conduit/wiki)
+[**Docs**](https://alaz.so/conduit/docs) · [**Developer Guide**](https://alaz.so/conduit/developers)
 
 </div>
 
@@ -108,7 +108,6 @@ That runs the full test suite and enforces the JaCoCo coverage gate.
 
 - **[User and operator docs](https://alaz.so/conduit/docs)**: installation, commands, configuration
 - **[Developer guide](https://alaz.so/conduit/developers)**: building plugins and bridges against the API *(coming soon)*
-- **[Wiki](https://github.com/alazso/Conduit/wiki)**: design notes, FAQ, migration *(coming soon)*
 
 ## Contributing
 
