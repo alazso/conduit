@@ -3,6 +3,7 @@ version: "${version}"
 description: Charges a Conduit economy fee to open an ender chest (consumer-only example)
 authors: [Alazso]
 api-version: "26.1"
+folia-supported: true
 main: so.alaz.conduit.example.enderfee.ConduitEnderFeePlugin
 dependencies:
   server:

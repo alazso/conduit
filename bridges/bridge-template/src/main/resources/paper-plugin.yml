@@ -3,6 +3,7 @@ version: "${version}"
 description: Reference Conduit economy bridge template
 authors: [Alazso]
 api-version: "26.1"
+folia-supported: true
 main: so.alaz.conduit.bridge.template.TemplateBridgePlugin
 dependencies:
   server:

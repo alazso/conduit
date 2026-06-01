@@ -3,6 +3,7 @@ version: "${version}"
 description: PlayerPoints economy bridge for Conduit
 authors: [Alazso]
 api-version: "26.1"
+folia-supported: true
 main: so.alaz.conduit.bridge.playerpoints.PlayerPointsBridgePlugin
 dependencies:
   server:

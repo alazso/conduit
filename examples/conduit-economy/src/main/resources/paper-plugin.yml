@@ -3,6 +3,7 @@ version: "${version}"
 description: Small in-memory Conduit economy provider + consumer for dev-server testing
 authors: [Alazso]
 api-version: "26.1"
+folia-supported: true
 main: so.alaz.conduit.example.economy.ConduitEconomyPlugin
 dependencies:
   server:

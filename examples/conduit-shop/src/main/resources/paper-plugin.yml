@@ -3,6 +3,7 @@ version: "${version}"
 description: Case B example — server owner selects which Conduit economy the shop uses
 authors: [Alazso]
 api-version: "26.1"
+folia-supported: true
 main: so.alaz.conduit.example.shop.ConduitShopPlugin
 dependencies:
   server:
